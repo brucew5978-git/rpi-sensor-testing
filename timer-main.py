@@ -29,7 +29,7 @@ TIMER_BUZZ_INTERVAL = 5
 TIMER_PANIC = 3
 
 # 14 minutes operating time
-#TIME_OUT_LIMIT = 10
+TIME_OUT_LIMIT = 10
 
 REFRESH_FREQUENCY = 0.5
 
@@ -46,6 +46,7 @@ GPIO.setup(BUZZER_PIN, GPIO.OUT)
 lcd = character_lcd.Character_LCD_Mono(lcd_rs, lcd_en, lcd_d4, lcd_d5, lcd_d6, lcd_d7, lcd_columns, lcd_rows)
 
 def print_msg(string):
+    lcd.clear()
     lcd.message = string
 
 def reminder():
@@ -59,11 +60,17 @@ def panic():
     print("!!! Sending PANIC alert !!!")   
     GPIO.output(BUZZER_PIN, GPIO.HIGH)
     start_time = time.time()
-    print_msg("!! PANIC !!") 
-    time.sleep(20)
+    print_msg("!! PANIC !! \n") 
+    
+    while True:
+    	
+    	if not GPIO.input(SAFE_BUTTON_PIN):
+    		print("Canceling PANIC request")
+    		print_msg("Reversed \n PANIC CALL")
+    		break
     
 
-start_time = 0
+#start_time = 0
 
 
 try:
@@ -81,7 +88,7 @@ try:
 		while (current_time-start_time) < TIME_OUT_LIMIT:
 		
 			print("in main loop")
-			print_msg("Status: Normal")
+			print_msg("Status: Normal \n")
 		
 			if (current_time-start_time) > TIMER_BUZZ_INTERVAL:
 				print("in buzzer interval")
