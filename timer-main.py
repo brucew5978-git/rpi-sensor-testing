@@ -76,59 +76,59 @@ def panic():
 try:
 	while True:
 	# Button is pressed when input is LOW
-	#if not GPIO.input(LIMIT_SWITCH):
-	
-		print("Box Opened....")
-
-		start_time = time.time()
-
-		current_time = time.time()
-
-		# Looping until time out 
-		while (current_time-start_time) < TIME_OUT_LIMIT:
+		if GPIO.input(LIMIT_SWITCH):
 		
-			print("in main loop")
-			print_msg("Status: Normal \n")
-		
-			if (current_time-start_time) > TIMER_BUZZ_INTERVAL:
-				print("in buzzer interval")
-				
-				start_time = time.time()
-				current_time = time.time()
-				while (current_time-start_time) < TIMER_PANIC:
-				
-					reminder()
-				
-					if not GPIO.input(SAFE_BUTTON_PIN):
-					    print("SAFE PIN")
-					    # Reset start time to reflect that user is still active
-					    start_time = time.time()
-					    break
-					    
-					if GPIO.input(PANICK_BUTTON_PIN):
-					    panic()
-					
-					current_time = time.time()
-					time.sleep(REFRESH_FREQUENCY)
-				
-				if (current_time-start_time) >= TIMER_PANIC:
-					panic()
-					
-			# If panic button is pressed, send panic signal to response
-			if GPIO.input(PANICK_BUTTON_PIN):
-				panic()
-			
+			print("Box Opened....")
+
+			start_time = time.time()
+
 			current_time = time.time()
-			GPIO.output(BUZZER_PIN, GPIO.LOW)   
+
+			# Looping until time out 
+			while (current_time-start_time) < TIME_OUT_LIMIT:
 			
-			time.sleep(REFRESH_FREQUENCY)
+				print("in main loop")
+				print_msg("Status: Normal \n")
+			
+				if (current_time-start_time) > TIMER_BUZZ_INTERVAL:
+					print("in buzzer interval")
+					
+					start_time = time.time()
+					current_time = time.time()
+					while (current_time-start_time) < TIMER_PANIC:
+					
+						reminder()
+					
+						if not GPIO.input(SAFE_BUTTON_PIN):
+							print("SAFE PIN")
+							# Reset start time to reflect that user is still active
+							start_time = time.time()
+							break
+							
+						if GPIO.input(PANICK_BUTTON_PIN):
+							panic()
+						
+						current_time = time.time()
+						time.sleep(REFRESH_FREQUENCY)
+					
+					if (current_time-start_time) >= TIMER_PANIC:
+						panic()
+						
+				# If panic button is pressed, send panic signal to response
+				if GPIO.input(PANICK_BUTTON_PIN):
+					panic()
+				
+				current_time = time.time()
+				GPIO.output(BUZZER_PIN, GPIO.LOW)   
+				
+				time.sleep(REFRESH_FREQUENCY)
 
-		
-		
-		#print_msg("Time out \nplease close box")
-		#print("timeout reached, please close the box")
+			
+			
+			#print_msg("Time out \nplease close box")
+			#print("timeout reached, please close the box")
 
-		time.sleep(0.1)
+			time.sleep(0.1)
         
 except KeyboardInterrupt:
 	GPIO.cleanup() 
