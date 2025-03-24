@@ -15,7 +15,7 @@ SAFE_BUTTON_PIN = 16
 
 GREEN_LIGHT_PIN = 5
 YELLOW_LIGHT_PIN = 6
-RED_LIGHT_PIN = 26
+RED_LIGHT_PIN = 0
 
 # LCD pin configuration
 lcd_rs = digitalio.DigitalInOut(board.D25)
