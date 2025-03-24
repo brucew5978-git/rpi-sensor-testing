@@ -60,31 +60,31 @@ def print_msg(string):
 
 def reminder():
 	GPIO.output(GREEN_LIGHT_PIN, GPIO.LOW)
-    print("in buzzer interval")
-    print_msg("hold green \n button")
-    GPIO.output(BUZZER_PIN, GPIO.HIGH)
+	print("in buzzer interval")
+	print_msg("hold green \n button")
+	GPIO.output(BUZZER_PIN, GPIO.HIGH)
 	GPIO.output(YELLOW_LIGHT_PIN, GPIO.HIGH)
-    time.sleep(0.2)
-    GPIO.output(BUZZER_PIN, GPIO.LOW)
+	time.sleep(0.2)
+	GPIO.output(BUZZER_PIN, GPIO.LOW)
 	GPIO.output(YELLOW_LIGHT_PIN, GPIO.LOW)
 
 def panic():
-    print("!!! Sending PANIC alert !!!")
+	print("!!! Sending PANIC alert !!!")
 	GPIO.output(GREEN_LIGHT_PIN, GPIO.LOW)   
-    GPIO.output(BUZZER_PIN, GPIO.HIGH)
-    start_time = time.time()
-    print_msg("!! PANIC !! \n") 
+	GPIO.output(BUZZER_PIN, GPIO.HIGH)
+	start_time = time.time()
+	print_msg("!! PANIC !! \n") 
     
-    while True:
+	while True:
 
 		GPIO.output(RED_LIGHT_PIN, GPIO.HIGH)
-    	time.sleep(0.1)
+		time.sleep(0.1)
 		GPIO.output(RED_LIGHT_PIN, GPIO.LOW)
 
-    	if not GPIO.input(SAFE_BUTTON_PIN):
-    		print("Canceling PANIC request")
-    		print_msg("Reversed \n PANIC CALL")
-    		break
+		if not GPIO.input(SAFE_BUTTON_PIN):
+			print("Canceling PANIC request")
+			print_msg("Reversed \n PANIC CALL")
+			break
     	
 
     
