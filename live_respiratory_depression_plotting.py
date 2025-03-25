@@ -1,89 +1,120 @@
 import numpy as np
 import pandas as pd
 import scipy.signal as signal
+import time
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from pathlib import Path
 
-import time
+# 📌 Folder containing CSV files
+folder_path = "404-imu-data/sensor-on-shirt-chest-5-breadths-big/"
 
-# Filtering function: Chebyshev Type II Low-Pass Filter
+file_x = folder_path + "x-axis2.csv" 
+file_y = folder_path + "y-axis2.csv" 
+file_z = folder_path + "z-axis2.csv" 
+
+# 📌 Chebyshev Type II Low-Pass Filter
 def chebyshev_filter(signal_data, fs=50, cutoff=0.5, order=4, rs=40):
-    """ Apply a 4th-order Chebyshev Type II low-pass filter. """
     nyquist = 0.5 * fs
     normal_cutoff = cutoff / nyquist
     sos = signal.cheby2(order, rs, normal_cutoff, btype='low', analog=False, output='sos')
     return signal.sosfiltfilt(sos, signal_data)
 
-# Peak detection to estimate respiratory rate
-def detect_respiratory_peaks(filtered_signal, fs=50):
-    peaks, _ = signal.find_peaks(filtered_signal, height=0, distance=fs*1)  # Min 1s spacing
-    return peaks
+# 📌 Detect Breathing Rate (BPM) using Peak Detection
+def detect_breathing_rate(filtered_signal, fs=50):
+    peaks, _ = signal.find_peaks(filtered_signal, height=0, distance=fs*3)  # At least 3s apart
+    duration_in_minutes = len(filtered_signal) / (fs * 60)
+    if duration_in_minutes == 0:
+        return 0, peaks  # Prevent division by zero
+    breathing_rate = len(peaks) / duration_in_minutes  # BPM formula
+    return breathing_rate, peaks
 
-# Compute respiratory rate from detected peaks
-def compute_respiratory_rate(peak_indices, window_size=20):
-    num_breaths = len(peak_indices)
-    return (num_breaths / window_size) * 60  # Convert to breaths per minute
+# 📌 Detect Respiratory Depression (BPM < 10 or apnea > 15s)
+def detect_respiratory_depression(filtered_signal, fs=50):
+    bpm, peaks = detect_breathing_rate(filtered_signal, fs)
+    apnea_detected = False
+    if len(peaks) > 1:
+        peak_intervals = np.diff(peaks) / fs  # Convert to seconds
+        if np.any(peak_intervals > 15):
+            apnea_detected = True
 
-# Real-time plot setup
-fig, ax = plt.subplots()
-ax.set_title("Live Breathing Signal & Respiratory Rate")
-ax.set_xlabel("Time (samples)")
-ax.set_ylabel("Amplitude")
-line_raw, = ax.plot([], [], 'b', label="Raw Signal")  # Blue - Raw signal
-line_filtered, = ax.plot([], [], 'r', label="Filtered Signal")  # Red - Filtered
-line_peaks, = ax.plot([], [], 'go', label="Detected Breaths")  # Green dots for peaks
-ax.legend()
-text_rate = ax.text(0.02, 0.95, '', transform=ax.transAxes, fontsize=12, bbox=dict(facecolor='white', alpha=0.5))  # Respiratory rate display
+    # 🚨 Alerts
+    if bpm < 10:
+        print("⚠️ Bradypnea Detected: BPM =", bpm)
+    if apnea_detected:
+        print("🚨 Apnea Detected: No breath for > 15 sec!")
 
-# File path (Update with actual CSV)
-csv_file = "404-imu-data/sensor-on-shirt-chest-5-breadths-big/x-axis1.csv"  
+    return bpm, apnea_detected, peaks
 
-# Parameters
-fs = 50  # Sampling frequency (Hz)
-window_size = 20  # Window size in seconds
-samples_to_read = fs * window_size  # Number of samples to read
+# 📌 Real-Time Monitoring with Live Plotting
+def monitor_breathing(fs=50, window_size=10):
+    samples_to_read = fs * window_size  # Read last 10 seconds of data
 
-# Update function for real-time plotting
-def update(frame):
-    try:
-        df = pd.read_csv(csv_file)
-        if len(df) < samples_to_read:
-            return
+    # Initialize plot
+    fig, ax = plt.subplots()
+    ax.set_title("Real-Time Respiratory Signal")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Acceleration")
+    
+    raw_line, = ax.plot([], [], label="Raw Accelerometer Signal", color="gray", alpha=0.5)
+    filtered_line, = ax.plot([], [], label="Filtered Respiratory Signal", color="blue")
+    peak_dots, = ax.plot([], [], "ro", label="Detected Breaths")
+    ax.legend()
+    
+    def update_plot(frame):
+        try:
+            # 📌 Read CSV files
+            df_x = pd.read_csv(file_x, header=None, names=['X', 'Time'])
+            df_y = pd.read_csv(file_y, header=None, names=['Y', 'Time'])
+            df_z = pd.read_csv(file_z, header=None, names=['Z', 'Time'])
 
-        # Extract latest data (assumes second column = acceleration)
-        raw_signal = df.iloc[-samples_to_read:, 1].values  
+            if len(df_x) < samples_to_read:
+                print("⚠️ Not enough data yet...")
+                return raw_line, filtered_line, peak_dots  # Skip update
+            
+            # 📌 Extract recent data
+            time_data = df_x['Time'].iloc[-samples_to_read:]
+            x = df_x['X'].iloc[-samples_to_read:]
+            y = df_y['Y'].iloc[-samples_to_read:]
+            z = df_z['Z'].iloc[-samples_to_read:]
 
-        print("raw_signal: ", raw_signal)
-        time.sleep(1000)
+            # 📌 Determine dominant axis
+            p2p_x, p2p_y, p2p_z = np.ptp(x), np.ptp(y), np.ptp(z)
+            dominant_signal = x if p2p_x > p2p_y and p2p_x > p2p_z else (y if p2p_y > p2p_x and p2p_y > p2p_z else z)
 
-        # Filter the raw signal
-        filtered_signal = chebyshev_filter(raw_signal, fs=fs)
+            # 📌 Skip first N values (remove noisy startup data)
+            N = 3
+            raw_signal = dominant_signal[N:]
+            time_data = time_data[N:]
 
-        # Detect peaks (breaths)
-        peak_indices = detect_respiratory_peaks(filtered_signal, fs)
+            # 📌 Replace NaN values with 0
+            raw_signal = np.nan_to_num(raw_signal, nan=0.0)
 
-        # Compute respiratory rate
-        respiratory_rate = compute_respiratory_rate(peak_indices, window_size)
+            # 📌 Apply Filtering
+            filtered_signal = chebyshev_filter(raw_signal, fs=fs)
 
-        # Update plot
-        line_raw.set_data(range(len(raw_signal)), raw_signal)
-        line_filtered.set_data(range(len(filtered_signal)), filtered_signal)
-        line_peaks.set_data(peak_indices, filtered_signal[peak_indices])  # Plot peaks
-        text_rate.set_text(f"Respiratory Rate: {respiratory_rate:.1f} BPM")
+            # 📌 Compute BPM & detect apnea
+            bpm, apnea_detected, peaks = detect_respiratory_depression(filtered_signal, fs)
 
-        # Adjust axis dynamically
-        ax.set_xlim(0, len(raw_signal))
-        ax.set_ylim(min(raw_signal) - 0.05, max(raw_signal) + 0.05)
+            # 📌 Print results
+            print(f"🫁 Respiratory Rate: {bpm:.2f} BPM  {'🚨 Apnea Detected!' if apnea_detected else ''}")
 
-        # 🚨 **Trigger alert if respiratory rate <10 BPM or breath stops >15s**
-        if respiratory_rate < 10:
-            print("⚠️ WARNING: Respiratory rate dangerously low!")
-        if len(peak_indices) == 0:
-            print("🚨 ALERT: No detected breaths in last 20s!")
+            # 📌 Update plot
+            raw_line.set_data(np.arange(len(raw_signal)), raw_signal)
+            filtered_line.set_data(np.arange(len(filtered_signal)), filtered_signal)
+            peak_dots.set_data(peaks, filtered_signal[peaks])  # Mark detected breaths
+            
+            ax.set_xlim(0, len(filtered_signal))  # Adjust x-axis dynamically
+            ax.set_ylim(min(filtered_signal) - 0.05, max(filtered_signal) + 0.05)  # Adjust y-axis
+            
+            return raw_line, filtered_line, peak_dots
 
-    except Exception as e:
-        print("Error:", e)
+        except Exception as e:
+            print("Error:", e)
+            return raw_line, filtered_line, peak_dots
 
-# Animation function to update the plot in real-time
-ani = animation.FuncAnimation(fig, update, interval=1000)  # Update every second
-plt.show()
+    ani = animation.FuncAnimation(fig, update_plot, interval=1000)  # Update every second
+    plt.show()
+
+# 📌 Run real-time breathing monitor with live plotting
+monitor_breathing()
