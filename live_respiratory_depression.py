@@ -5,10 +5,10 @@ import time
 from pathlib import Path
 
 # 📌 Folder containing CSV files
-folder_path = "404-imu-data/sensor-on-shirt-chest-5-breadths-big/"
-file_x = folder_path + "x-axis3.csv"
-file_y = folder_path + "y-axis3.csv"
-file_z = folder_path + "z-axis3.csv"
+folder_path = "./"
+file_x = folder_path + "x-axis.csv"
+file_y = folder_path + "y-axis.csv"
+file_z = folder_path + "z-axis.csv"
 
 # 📌 Chebyshev Type II Low-Pass Filter
 def chebyshev_filter(signal_data, fs=50, cutoff=0.5, order=4, rs=40):

@@ -7,11 +7,11 @@ import matplotlib.animation as animation
 from pathlib import Path
 
 # 📌 Folder containing CSV files
-folder_path = "404-imu-data/sensor-on-shirt-chest-5-breadths-big/"
+folder_path = "./"
 
-file_x = folder_path + "x-axis2.csv" 
-file_y = folder_path + "y-axis2.csv" 
-file_z = folder_path + "z-axis2.csv" 
+file_x = folder_path + "x-axis.csv" 
+file_y = folder_path + "y-axis.csv" 
+file_z = folder_path + "z-axis.csv" 
 
 # 📌 Chebyshev Type II Low-Pass Filter
 def chebyshev_filter(signal_data, fs=50, cutoff=0.5, order=4, rs=40):

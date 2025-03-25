@@ -1,13 +1,23 @@
 import board
 import busio
 import adafruit_bno055
+
 from adafruit_blinka.microcontroller.bcm283x.pin import Pin
+import adafruit_bitbangio as bitbangio
 
 import csv
 import time
 
-SCL_PIN = 16
-SDA_PIN = 15
+SCL_PIN = 8
+SDA_PIN = 7
+
+i2c = bitbangio.I2C(Pin(SCL_PIN), Pin(SDA_PIN))
+
+sensor = adafruit_bno055.BNO055_I2C(i2c)
+
+start_time = time.time()
+
+print("Sensor Data")
 
 def save_to_csv(acc, time, filename):
    if not filename.endswith('.csv'):
@@ -19,13 +29,6 @@ def save_to_csv(acc, time, filename):
       writer = csv.writer(f)
       writer.writerow(data)
 
-i2c = busio.I2C(Pin(SCL_PIN), Pin(SDA_PIN))
-
-sensor = adafruit_bno055.BNO055_I2C(i2c)
-
-start_time = time.time()
-
-print("Sensor Data")
 
 while True: 
   gravity = [
