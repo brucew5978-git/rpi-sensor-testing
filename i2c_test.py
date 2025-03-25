@@ -1,9 +1,13 @@
 import board
 import busio
 import adafruit_bno055
+from adafruit_blinka.microcontroller.bcm283x.pin import Pin
 
 import csv
 import time
+
+SCL_PIN = 16
+SDA_PIN = 15
 
 def save_to_csv(acc, time, filename):
    if not filename.endswith('.csv'):
@@ -15,7 +19,7 @@ def save_to_csv(acc, time, filename):
       writer = csv.writer(f)
       writer.writerow(data)
 
-i2c = busio.I2C(board.SCL, board.SDA)
+i2c = busio.I2C(Pin(SCL_PIN), Pin(SDA_PIN))
 
 sensor = adafruit_bno055.BNO055_I2C(i2c)
 
