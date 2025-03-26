@@ -7,7 +7,7 @@ import matplotlib.animation as animation
 from pathlib import Path
 
 # 📌 Folder containing CSV files
-folder_path = "./"
+folder_path = "./404-imu-data/pi-data/"
 
 file_x = folder_path + "x-axis.csv" 
 file_y = folder_path + "y-axis.csv" 
@@ -53,7 +53,7 @@ def monitor_breathing(fs=50, window_size=10):
     # Initialize plot
     fig, ax = plt.subplots()
     ax.set_title("Real-Time Respiratory Signal")
-    ax.set_xlabel("Time (s)")
+    ax.set_xlabel("Samples per 20s")
     ax.set_ylabel("Acceleration")
     
     raw_line, = ax.plot([], [], label="Raw Accelerometer Signal", color="gray", alpha=0.5)

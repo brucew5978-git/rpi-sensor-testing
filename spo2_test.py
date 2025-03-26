@@ -8,6 +8,34 @@ import time
 import RPi.GPIO as GPIO
 import threading
 
+import csv
+import busio
+import adafruit_bno055
+
+from adafruit_blinka.microcontroller.bcm283x.pin import Pin
+import adafruit_bitbangio as bitbangio
+
+from live_respiratory_depression import monitor_breathing
+
+SCL_PIN = 8
+SDA_PIN = 7
+
+i2c = bitbangio.I2C(Pin(SCL_PIN), Pin(SDA_PIN))
+
+sensor = adafruit_bno055.BNO055_I2C(i2c)
+
+start_time = time.time()
+
+def save_to_csv(acc, time, filename):
+   if not filename.endswith('.csv'):
+      filename+='.csv'
+      
+   data = [acc, time]
+   
+   with open(filename, 'a', newline='') as f:
+      writer = csv.writer(f)
+      writer.writerow(data)
+
 
 
 ###
@@ -48,32 +76,11 @@ def max30102_setup():
   max30102.sensor_start_collect()
   time.sleep(1)
 
-###
-#end of max30102 set up code#
-###
-
-lcd_rs = digitalio.DigitalInOut(board.D25)
-lcd_en = digitalio.DigitalInOut(board.D24)
-lcd_d7 = digitalio.DigitalInOut(board.D22)
-lcd_d6 = digitalio.DigitalInOut(board.D18)
-lcd_d5 = digitalio.DigitalInOut(board.D17)
-lcd_d4 = digitalio.DigitalInOut(board.D23)
-
-lcd_columns = 16
-lcd_rows = 2
-
-lcd = character_lcd.Character_LCD_Mono(lcd_rs, lcd_en, lcd_d4, lcd_d5, lcd_d6, lcd_d7, lcd_columns, lcd_rows)
-
-def print_msg(string):
-    lcd.message = string
-
-
-lcd.clear()
 
 def max30102_print_to_lcd():
   max30102.get_heartbeat_SPO2()
   print("SPO2: "+str(max30102.SPO2)+"% \nH-rate: "+str(max30102.heartbeat)+"bpm ")
-  print_msg("SPO2: "+str(max30102.SPO2)+"% \nH-rate: "+str(max30102.heartbeat)+"bpm ") 
+  #print_msg("SPO2: "+str(max30102.SPO2)+"% \nH-rate: "+str(max30102.heartbeat)+"bpm ") 
   #print_msg("H-rate is: "+str(max30102.heartbeat)+"Times/min")
   time.sleep(1)
 
@@ -82,5 +89,26 @@ if __name__ == "__main__":
         max30102_setup()
         while True:
             max30102_print_to_lcd()
+
+            gravity = [
+              [sensor.gravity[2]]
+            ]
+              
+            lin_motion = [
+              [sensor.linear_acceleration[2]]
+            ]
+
+            curr_time = time.time() - start_time
+
+            if sensor.linear_acceleration[2] > 0.12:
+            
+              print(f"Reading: {lin_motion}C")
+            
+            save_to_csv(sensor.linear_acceleration[0], curr_time, 'x-axis')
+            save_to_csv(sensor.linear_acceleration[1], curr_time, 'y-axis')
+            save_to_csv(sensor.linear_acceleration[2], curr_time, 'z-axis')
+
+            monitor_breathing()
+
     except KeyboardInterrupt:
        print("exiting...")
