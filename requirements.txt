@@ -1,0 +1,2 @@
+# i2c_test.py
+pip install adafruit-circuitpython-bitbangio
